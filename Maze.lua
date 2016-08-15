@@ -70,13 +70,14 @@ function Maze(outputsize)
 				forest[indexA] = treeA
 				table.remove(forest, indexB)
 			end
+			if(index % 100 == 0) then
+				coroutine.yield()
+			end
 		end
-
-		-- Transform the Tree into blocks (a cBlockArea)
-		finish()
 	end
 
-	function finish()
+	-- Transform the Tree into blocks (a cBlockArea)
+	local finish = function()
 		local blocks = {}
 		-- Initialize blocks variable with Barrier at top and FLOOR/WALL placeholders
 		for x=1,blocksize do
@@ -136,6 +137,12 @@ function Maze(outputsize)
 					if(blocks[x][y][z] == WALL or blocks[x][y][z] == FLOOR) then
 	                                        local xPart = math.floor(x / FACTOR) + 1 -- originally 0-based, +1 to have it 1-based for convinience
 	                                        local zPart = math.floor(z / FACTOR) + 1
+						if(xPart > config.parts) then
+							xPart = xPart - 1
+						end
+						if(zPart > config.parts) then
+							zPart = zPart - 1
+						end
 						local part = xPart + (zPart-1)*config.parts
 						local floors = config.floors
 						local walls = config.walls
@@ -175,6 +182,7 @@ function Maze(outputsize)
 	return {
 		generate = generate,
 		getCenter = getCenter,
-		getArea = getArea
+		getArea = getArea,
+		finish = finish
 	}
 end

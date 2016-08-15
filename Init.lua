@@ -1,5 +1,7 @@
 PLUGIN = nil
 
+mazes = {}
+
 function Initialize(Plugin)
 	Plugin:SetName("MazeGenerator")
 	Plugin:SetVersion(1)
@@ -12,12 +14,12 @@ function Initialize(Plugin)
 	dofile(cPluginManager:GetPluginsPath() .. "/InfoReg.lua")
 	RegisterPluginInfoCommands()
 	RegisterPluginInfoConsoleCommands()
+	cPluginManager:AddHook(cPluginManager.HOOK_TICK, onTick);
 
 	cFile:CreateFolder("schematics")
 	LOG("Initialised " .. Plugin:GetName() .. " v." .. Plugin:GetVersion())
 	return true
 end
-
 function OnDisable()
 	LOG(PLUGIN:GetName() .. " is shutting down...")
 end
@@ -48,7 +50,7 @@ function handlePlayerSave(Split, Player)
 	-- Logic missing
 	return true
 end
-function NOTUSED(SPlit,Player)
+function NOTUSED(Split,Player)
 	local usage = "Usage: " .. Split[1] .. " " .. Split[2] .. " <name>"
 	if(#Split ~= 3) then
 		Player:SendMessageInfo(usage)
@@ -93,17 +95,39 @@ function handleConsoleGenerate(Split)
 end
 
 function generateMaze(world, position, size, name)
+	local index = #mazes + 1
 	LOG("Generating...")
-	local maze = Maze(size)
-	maze.generate()
 
-	LOG("Placing blocks...")
-	local area = maze.getArea()
-	area:Write(world, Vector3i(position))
+	mazes[index] = {}
+	mazes[index].maze = Maze(size)
+	mazes[index].world = world
+	mazes[index].position = position
+	mazes[index].size = size
+	mazes[index].name = name
+	mazes[index].co = coroutine.create(function() 
+		mazes[index].maze.generate()
+	end)
+	coroutine.resume(mazes[index].co)
+end
 
---	LOG("Placing schematic...")
---	local schematic = cBlockArea():LoadFromSchematicFile('schematics/' .. name)
---	local size = Vector3d(schematic.GetSize())
---	schematic:Write(world, Vector3i(position + maze.getCenter() - size/2))
-	
+function onTick(timeDelta)
+	for index,maze in pairs(mazes) do
+		LOG('Resuming ... ' .. index)
+		coroutine.resume(mazes[index].co)
+		if(coroutine.status(mazes[index].co) ~= 'suspended') then
+			LOG("Finishing...")
+			mazes[index].maze.finish()
+
+			LOG("Placing blocks...")
+			local area = mazes[index].maze.getArea()
+			area:Write(mazes[index].world, Vector3i(mazes[index].position))
+
+		--	LOG("Placing schematic...")
+		--	local schematic = cBlockArea():LoadFromSchematicFile('schematics/' .. mazes[index].name)
+		--	local size = Vector3d(schematic.GetSize())
+		--	schematic:Write(mazes[index].world, Vector3i(mazes[index].position + mazes[index].maze.getCenter() - mazes[index].size/2))
+
+			mazes[index] = nil
+		end
+	end
 end
