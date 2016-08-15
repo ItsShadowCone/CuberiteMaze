@@ -1,2 +1,2 @@
 # CuberiteMaze
-A Cuberite plugin that generates a maze
+A Cuberite plugin that generates random mazes using Kruskal's algorithm
